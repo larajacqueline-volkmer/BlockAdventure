@@ -1,145 +1,91 @@
-/* === Block Adventure – style.css (gesamt) === */
 
-/* Grundlayout */
-* { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
-body {
-  background: #0a0c28;
-  color: #fff;
-  font-family: 'Poppins', 'Rajdhani', system-ui, sans-serif;
-  text-align: center;
-  overflow-x: hidden;      /* keine seitl. Scrollbalken */
-  overflow-y: auto;        /* Footer soll nie abgeschnitten sein */
+/* === Block Adventure – Mobile + Desktop === */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:#0a0c28; color:#fff;
+  font-family:'Poppins','Rajdhani',system-ui,sans-serif;
+  text-align:center; overflow-x:hidden;
 }
 
-/* Titel + kurzer Hinweis */
-h1 {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 2.3rem;
-  font-weight: 700;
-  color: #d457ae; /* gedimmtes Pink */
-  margin: 18px 0 8px;
-  text-shadow:
-    0 0 6px rgba(212,87,174,0.55),
-    0 0 14px rgba(212,87,174,0.35);
+/* Titel + Untertitel */
+h1{
+  font-family:'Rajdhani',sans-serif; font-weight:700;
+  font-size:2.3rem; margin:18px 0 8px;
+  color:#d457ae;
+  text-shadow:0 0 6px rgba(212,87,174,.55),0 0 14px rgba(212,87,174,.35);
 }
-#subtitle {
-  font-size: 0.9rem;
-  font-weight: 400;
-  margin-left: 10px;
-  color: #cfcfd7;
-  opacity: 0.9;
-}
+#subtitle{ font-size:.95rem; margin-left:10px; color:#cfcfd7; opacity:.9 }
 
-/* Buttons */
-button {
-  background: #171a2f;
-  border: 2px solid #66eaff;
-  color: #66eaff;
-  padding: 8px 16px;
-  margin: 6px 8px;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: transform .12s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
-  box-shadow: 0 0 10px rgba(102,234,255,0.25);
+/* Top-Buttons */
+#top-buttons button{
+  background:#171a2f; border:2px solid #66eaff; color:#66eaff;
+  padding:8px 16px; margin:6px 8px; border-radius:10px;
+  font-size:.95rem; cursor:pointer;
+  transition:transform .12s, background .18s, color .18s, box-shadow .18s;
+  box-shadow:0 0 10px rgba(102,234,255,.25);
 }
-button:hover { background: #66eaff; color: #051017; transform: translateY(-2px); }
-button:active { transform: translateY(0); }
+#top-buttons button:hover{ background:#66eaff; color:#051017; transform:translateY(-2px) }
 
-/* Spielfeld-Kasten (p5 Canvas steckt darin) */
-#canvas-container {
-  position: relative;
-  display: inline-block;
-  width: 720px;   /* muss zur Canvas-Größe in script.js passen */
-  height: 420px;  /* dito */
-  margin: 10px auto 10px; /* kleiner Abstand oben, dicht zum Fortschritt */
-  padding: 10px;
-  border-radius: 16px;
+/* Spielfeld-Kasten – Größe kommt als CSS-Variablen von JS */
+#canvas-container{
+  --cw: 720px; --ch: 420px;
+  position:relative; display:inline-block;
+  width:var(--cw); height:var(--ch);
+  margin:10px auto 10px; padding:10px; border-radius:16px;
+  background:#0b0f2b; border:3px solid #d457ae;
+  box-shadow:0 0 22px rgba(212,87,174,.55),0 0 44px rgba(212,87,174,.35),inset 0 0 10px rgba(212,87,174,.25);
+}
+#canvas-container canvas{display:block;width:100%;height:100%;border-radius:12px}
 
-  /* sichtbarer Neon‑Pink‑Glow */
-  background: #0b0f2b;
-  border: 3px solid #d457ae;
-  box-shadow:
-    0 0 22px rgba(212,87,174,0.55),
-    0 0 44px rgba(212,87,174,0.35),
-    inset 0 0 10px rgba(212,87,174,0.25);
+/* Level-Overlay */
+.fade{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(1);
+  z-index:5; font-size:2.1rem; font-weight:700; color:#fff;
+  background:rgba(0,0,0,.45); padding:14px 24px; border-radius:12px;
+  border:1px solid rgba(255,255,255,.15); box-shadow:0 8px 22px rgba(0,0,0,.45);
+  opacity:0; transition:opacity .35s, transform .35s; pointer-events:none;
 }
-#canvas-container canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
-}
+.fade.show{opacity:1}
+.hidden{display:none}
 
-/* Level-Overlay (Text „Level X“ / „Etappenziel …“) – mittig über Canvas */
-.fade {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%) scale(1);
-  z-index: 5;
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(0,0,0,0.45);
-  padding: 16px 28px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 8px 22px rgba(0,0,0,0.45);
-  opacity: 0;
-  transition: opacity .35s ease, transform .35s ease;
-  pointer-events: none;
+/* Fortschritt */
+#progress-container{
+  width:90%; max-width:var(--cw);
+  height:12px; margin:8px auto 6px; border-radius:6px;
+  background:rgba(255,255,255,.08); overflow:hidden;
+  box-shadow:0 0 8px rgba(212,87,174,.35);
 }
-.fade.show   { opacity: 1; }
-.hidden      { display: none; }
-
-/* Fortschrittsbalken */
-#progress-container {
-  width: 90%;
-  max-width: 720px;
-  height: 12px;
-  margin: 8px auto 6px;         /* direkt unter dem Kasten */
-  background: rgba(255,255,255,0.08);
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 0 8px rgba(212,87,174,0.35);
+#progress-fill{
+  height:100%; width:0%;
+  background:linear-gradient(90deg,#08f,#d457ae,#b07aff);
+  transition:width .3s ease;
 }
-#progress-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #08f, #d457ae, #b07aff);
-  transition: width 0.3s ease;
-}
-
-/* Leveltext unter dem Balken */
-#levelDisplay {
-  margin-top: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: .2px;
-  opacity: .95;
-}
-
-/* Steuerungs-Hinweise */
-#controls {
-  margin: 5px 0 8px;
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
+#levelDisplay{margin-top:6px;font-size:1rem;font-weight:600;letter-spacing:.2px;opacity:.95}
+#controls{margin:5px 0 8px;font-size:.9rem;opacity:.9}
 
 /* Footer */
-footer {
-  margin: 6px 0 14px;
-  font-size: 0.86rem;
-  color: #aab;
-  opacity: 0.9;
+footer{margin:6px 0 14px;font-size:.86rem;color:#aab;opacity:.9}
+
+/* Touch Controls – nur auf Touch anzeigen */
+#touch-controls{
+  display:none; position:fixed; left:0; right:0; bottom:env(safe-area-inset-bottom, 10px);
+  margin:auto; width:min(480px,92vw); justify-content:space-between; gap:14px;
+  z-index:9; padding:6px 10px;
+  background:rgba(5,7,20,.35); backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.12); border-radius:14px;
+  box-shadow:0 10px 24px rgba(0,0,0,.35);
+}
+#touch-controls button{
+  flex:1; font-size:1.25rem; padding:10px 0;
+  background:#171a2f; color:#66eaff; border:2px solid #66eaff; border-radius:10px;
+}
+@media (hover:none), (pointer:coarse){
+  #controls{ display:none; }           /* Desktop-Hinweis ausblenden */
+  #touch-controls{ display:flex; }     /* Touch-Buttons zeigen */
 }
 
-/* Responsiv – skaliere dezent, damit alles sichtbar bleibt */
+/* Responsiv: Canvas skaliert über Variablen */
 @media (max-width: 860px){
-  h1 { font-size: 2rem; }
-  #canvas-container { transform: scale(0.92); transform-origin: top center; }
-}
-@media (max-width: 720px){
-  #canvas-container { transform: scale(0.86); }
+  h1{font-size:2rem}
 }

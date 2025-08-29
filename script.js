@@ -1,6 +1,7 @@
-// === Block Adventure – script.js (vollständig) ===
 
-// ---------- Konfiguration ----------
+// === Block Adventure – responsive + Touch ===
+
+// ----- Config -----
 const MAX_LEVELS = 100;
 const GRAVITY = 0.65;
 const JUMP = -12;
@@ -14,13 +15,25 @@ const BASE_MAX_DX = 180;
 const MAX_STEP_Y  = 105;
 const TOP_MARGIN  = 80;
 
-// Gedimmte UI‑Pink‑Farbe (konsistent mit CSS)
-const UI_PINK = [212, 87, 174]; // #d457ae
-
+const UI_PINK = [212,87,174]; // #d457ae
 const SAVE_KEY = "block_adventure_level";
 const RESTART_SAME_LEVEL_ON_DEATH = true;
 
-// ---------- State ----------
+// ----- Responsive Canvas -----
+let CANVAS_BASE_W = 720;
+let CANVAS_BASE_H = 420;
+
+function targetCanvasSize(){
+  // Desktop: feste Basegröße; Mobile: auf Breite skalieren
+  const isTouch = matchMedia('(hover:none), (pointer:coarse)').matches;
+  const margin = 24;
+  const maxW = isTouch ? (window.innerWidth - margin) : CANVAS_BASE_W;
+  const w = Math.min(CANVAS_BASE_W, Math.max(320, maxW));
+  const h = Math.round(w * (CANVAS_BASE_H / CANVAS_BASE_W));
+  return {w, h};
+}
+
+// ----- State -----
 let level = 1;
 let running = false;
 let player;
@@ -30,12 +43,17 @@ let prevY = 0;
 let particles = [];
 let finale = false;
 
-// ---------- Setup / UI ----------
-function setup(){
-  const cv = createCanvas(720, 420);
-  cv.parent("canvas-container");
+// Touch input flags
+let touchLeft = false, touchRight = false, touchJump = false;
 
-  // Tastatur global
+// ----- Setup -----
+function setup(){
+  const {w,h} = targetCanvasSize();
+  const cv = createCanvas(w, h);
+  cv.parent("canvas-container");
+  applyContainerSize();
+
+  // Keyboard
   window.addEventListener('keydown', (e)=>{
     if (['ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
     if (!running && (e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
@@ -44,65 +62,81 @@ function setup(){
   }, {passive:false});
 
   // Buttons
-  const startBtn   = document.getElementById('start-btn');
-  const restartBtn = document.getElementById('restart-btn');
-  const saveBtn    = document.getElementById('save-btn');
+  sel('#start-btn')   ?.addEventListener('click', onContinue);
+  sel('#restart-btn') ?.addEventListener('click', onRestart);
+  sel('#save-btn')    ?.addEventListener('click', onSave);
 
-  if (startBtn) {
-    startBtn.addEventListener('click', () => {
-      const saved = loadProgress();
-      if (saved) level = clamp(saved, 1, MAX_LEVELS);
-      running = true; finale = false;
-      resetLevel(true);
-      showLevelUp(getLevelMsg(level, level%5===0), {etappe: (level%5===0)});
-    });
-  }
-  if (restartBtn){
-    restartBtn.addEventListener('click', () => {
-      running = true; finale = false;
-      level = 1; clearProgress();
-      resetLevel(true);
-      updateStartButtonLabel();
-      showLevelUp(getLevelMsg(level, false), {etappe:false});
-    });
-  }
-  if (saveBtn){
-    saveBtn.addEventListener('click', () => {
-      saveProgress(level);
-      updateStartButtonLabel();
-      showToast(`Spielstand gespeichert (Level ${level})`);
-    });
-  }
+  // Touch buttons
+  wireTouch('#btn-left',  v=>touchLeft=v);
+  wireTouch('#btn-right', v=>touchRight=v);
+  wireTouch('#btn-jump',  v=>{
+    touchJump=v;
+    if (v) tryJump();
+  });
 
-  // Menü‑Vorschau und HUD
+  // Start
   resetLevel(false);
   updateHUD(true);
-  updateStartButtonLabel();   // Beschriftung „Fortfahren (Level X)“
+  updateStartButtonLabel();
 }
 
+function windowResized(){
+  const {w,h} = targetCanvasSize();
+  resizeCanvas(w,h);
+  applyContainerSize();
+  // Neu generieren, damit Abstände zur neuen Breite passen
+  const keepRunning = running;
+  resetLevel(true);
+  running = keepRunning;
+}
+
+function applyContainerSize(){
+  const el = document.getElementById('canvas-container');
+  if (el){
+    el.style.setProperty('--cw', `${width}px`);
+    el.style.setProperty('--ch', `${height}px`);
+  }
+}
+
+// ----- Button handlers -----
+function onContinue(){
+  const saved = loadProgress();
+  if (saved) level = clamp(saved, 1, MAX_LEVELS);
+  running = true; finale = false;
+  resetLevel(true);
+  showLevelUp(getLevelMsg(level, level%5===0), {etappe:(level%5===0)});
+}
+function onRestart(){
+  running = true; finale = false;
+  level = 1; clearProgress();
+  resetLevel(true);
+  updateStartButtonLabel();
+  showLevelUp(getLevelMsg(level,false), {etappe:false});
+}
+function onSave(){
+  saveProgress(level);
+  updateStartButtonLabel();
+  showToast(`Spielstand gespeichert (Level ${level})`);
+}
+
+// ----- Draw loop -----
 function draw(){
   background(10,12,40);
 
-  // Plattformen & Spieler
   for(const p of platforms) drawPlatform(p);
   drawPlayer();
-
-  // Partikel
   updateParticles();
-
-  // HUD
   updateHUD();
 
   if(!running || finale) return;
 
-  // Eingabe + Physik + Kollision
   handleInput();
   applyPhysics();
   handleCollisions();
 
-  // Level‑Up nur auf oberster Plattform
+  // Level-Up: nur wenn auf oberster Plattform gelandet
   const top = getTopMostPlatform();
-  if (player.grounded && player.standingOn === top) {
+  if (player.grounded && player.standingOn === top){
     level = Math.min(level + 1, MAX_LEVELS);
     saveProgress(level);
     updateStartButtonLabel();
@@ -122,33 +156,55 @@ function draw(){
   }
 }
 
-// ---------- Eingabe ----------
+// ----- Input -----
 function handleInput(){
   player.vx = 0;
-  if (keyIsDown(LEFT_ARROW))  player.vx = -SPEED;
-  if (keyIsDown(RIGHT_ARROW)) player.vx =  SPEED;
+
+  const left  = keyIsDown(LEFT_ARROW)  || touchLeft;
+  const right = keyIsDown(RIGHT_ARROW) || touchRight;
+
+  if (left && !right)  player.vx = -SPEED;
+  if (right && !left)  player.vx =  SPEED;
 }
+
 function keyPressed(){
-  if (key === ' ' && player.grounded && running && !finale){
-    player.vy = JUMP;
-    player.grounded = false;
-    player.standingOn = null;
+  if ((key === ' ' || keyCode === 32) && running && player.grounded && !finale){
+    tryJump();
   }
   if (key === 's' || key === 'S'){
-    saveProgress(level);
-    updateStartButtonLabel();
-    showToast(`Spielstand gespeichert (Level ${level})`);
+    onSave();
   }
 }
 
-// ---------- Physik ----------
+function tryJump(){
+  if (!player.grounded) return;
+  player.vy = JUMP;
+  player.grounded = false;
+  player.standingOn = null;
+}
+
+// Touch helper
+function wireTouch(selStr, setFlag){
+  const el = document.querySelector(selStr);
+  if (!el) return;
+  const down = (e)=>{ e.preventDefault(); setFlag(true); running = true; };
+  const up   = (e)=>{ e.preventDefault(); setFlag(false); };
+  el.addEventListener('touchstart', down, {passive:false});
+  el.addEventListener('touchend',   up,   {passive:false});
+  el.addEventListener('touchcancel',up,   {passive:false});
+  el.addEventListener('mousedown',  down);
+  el.addEventListener('mouseup',    up);
+  el.addEventListener('mouseleave', up);
+}
+
+// ----- Physik/Kollision -----
 function applyPhysics(){
   prevY = player.y;
   player.vy += GRAVITY;
   player.x  += player.vx;
   player.y  += player.vy;
 
-  // Wrap-around
+  // Wrap
   if (player.x > width)        player.x = -player.w;
   if (player.x + player.w < 0) player.x = width;
 
@@ -157,7 +213,6 @@ function applyPhysics(){
   else player.grounded = false;
 }
 
-// ---------- Kollisionen ----------
 function handleCollisions(){
   const eps = 1.0;
   const prevBottom = prevY + player.h;
@@ -178,7 +233,7 @@ function handleCollisions(){
   }
 }
 
-// ---------- Tod / Respawn ----------
+// ----- Death / Respawn -----
 function die(){
   running = false;
   burst(player.x + player.w/2, player.y + player.h/2, 30, 'death');
@@ -186,15 +241,14 @@ function die(){
     if (!RESTART_SAME_LEVEL_ON_DEATH && level > 1) level -= 1;
     resetLevel(true);
     running = true;
-  }, {scaleFrom:1.0, scaleTo:1.0}); // Tod: nur Fade, kein Zoom
+  }, {scaleFrom:1.0, scaleTo:1.0});
 }
 
-// ---------- Level-Logik ----------
-function resetLevel(placeOnStart = true){
+// ----- Level-Logik / Generierung -----
+function resetLevel(placeOnStart=true){
   generatePlatforms(level);
 
   const startP = getBottomMostPlatform();
-
   player = {
     x: startP.x + startP.w/2 - 13,
     y: startP.y - 26,
@@ -207,36 +261,37 @@ function resetLevel(placeOnStart = true){
   if (!placeOnStart){
     player.vx = 0; player.vy = 0; player.grounded = true; player.standingOn = startP;
   }
-
   updateHUD(true);
 }
 
-// ---------- Plattform-Generierung ----------
-// Reduktion: immer 2–3 weniger als früher (min 3, max 20)
+// weniger Plattformen als früher, min 3, max 20
 function platformCountForLevel(lvl){
-  const desired = 3 + (lvl - 1);       // alter Zuwachs
+  const desired = 3 + (lvl - 1);
   const reduction = (lvl < 10 ? 2 : 3);
   return clamp(desired - reduction, 3, 20);
 }
 
-// Seitwärts‑Abstände skalieren mit Anzahl; Etappenziel‑Level (alle 5) schwerer
+// Seitwärtsabstände – passen sich Breite an
 function lateralConfigForCount(count, etappe){
+  // Basis abhängig von Canvasbreite
+  const scale = width / 720; // 1.0 bei Desktop
+  const s = (v)=> v*scale;
+
   if (etappe){
-    if (count < 13) return { wMin: 110, wMax: 145, minDX: 150, maxDX: 230 };
-    if (count < 17) return { wMin: 105, wMax: 140, minDX: 170, maxDX: 250 };
-    return             { wMin: 100, wMax: 135, minDX: 190, maxDX: 270 };
+    if (count < 13) return { wMin:s(110), wMax:s(145), minDX:s(150), maxDX:s(230) };
+    if (count < 17) return { wMin:s(105), wMax:s(140), minDX:s(170), maxDX:s(250) };
+    return             { wMin:s(100), wMax:s(135), minDX:s(190), maxDX:s(270) };
   }
-  if (count < 9)   return { wMin: BASE_W_MIN, wMax: BASE_W_MAX, minDX: BASE_MIN_DX, maxDX: BASE_MAX_DX };
-  if (count < 13)  return { wMin: 115, wMax: 155, minDX: 120, maxDX: 200 };
-  if (count < 17)  return { wMin: 110, wMax: 150, minDX: 140, maxDX: 230 };
-  return            { wMin: 105, wMax: 145, minDX: 160, maxDX: 260 };
+  if (count < 9)   return { wMin:s(BASE_W_MIN), wMax:s(BASE_W_MAX), minDX:s(BASE_MIN_DX), maxDX:s(BASE_MAX_DX) };
+  if (count < 13)  return { wMin:s(115), wMax:s(155), minDX:s(120), maxDX:s(200) };
+  if (count < 17)  return { wMin:s(110), wMax:s(150), minDX:s(140), maxDX:s(230) };
+  return            { wMin:s(105), wMax:s(145), minDX:s(160), maxDX:s(260) };
 }
 
 function generatePlatforms(lvl){
-  // deterministisch je Level
   randomSeed(lvl * 9973);
-
   platforms = [];
+
   const count = platformCountForLevel(lvl);
   const etappe = (lvl % 5 === 0);
 
@@ -247,50 +302,42 @@ function generatePlatforms(lvl){
   const lat = lateralConfigForCount(count, etappe);
 
   // Startplattform links
-  let prev = { x: 40, y: bottomY, w: START_W, h: 12 };
+  let prev = { x: 16, y: bottomY, w: Math.min(START_W, width*0.35), h: 12 };
   platforms.push(prev);
 
-  for (let i = 1; i < count; i++){
+  for (let i=1; i<count; i++){
     const w = random(lat.wMin, lat.wMax);
     const y = bottomY - i * stepY;
 
-    // abwechselnd rechts/links
     const sign = (i % 2 === 1) ? +1 : -1;
 
     const prevCenter = prev.x + prev.w/2;
+    const leftLimit  = 12 + w/2;
+    const rightLimit = width - 12 - w/2;
 
-    // Zielmittelpunkt mit Seitwärtsabständen
     let targetCenter = prevCenter + sign * random(lat.minDX, lat.maxDX);
-
-    // Ränder
-    const leftLimit  = 16 + w/2;
-    const rightLimit = width - 16 - w/2;
-
-    // einklemmen
     targetCenter = constrain(targetCenter, leftLimit, rightLimit);
 
-    // falls Abstand < minDX ⇒ Gegenrichtung probieren oder exakt minDX setzen
     let dx = targetCenter - prevCenter;
     if (Math.abs(dx) < lat.minDX){
       const altCenter = prevCenter - sign * lat.minDX;
       const clampedAlt = constrain(altCenter, leftLimit, rightLimit);
       const altDX = clampedAlt - prevCenter;
       targetCenter = (Math.abs(altDX) >= lat.minDX) ? clampedAlt
-                    : (sign > 0 ? Math.min(prevCenter + lat.minDX, rightLimit)
-                                : Math.max(prevCenter - lat.minDX, leftLimit));
+                    : (sign>0 ? Math.min(prevCenter + lat.minDX, rightLimit)
+                              : Math.max(prevCenter - lat.minDX, leftLimit));
     }
 
     const x = targetCenter - w/2;
-    const p = { x, y, w, h: 12 };
+    const p = { x, y, w, h:12 };
     platforms.push(p);
     prev = p;
   }
 
-  // sortieren: kleinster y = ganz oben
   platforms.sort((a,b)=> a.y - b.y);
 }
 
-// ---------- Partikel & Animationen ----------
+// ----- Partikel / Level-Overlays -----
 function burst(cx, cy, n=40, mode='confetti'){
   for (let i=0;i<n;i++){
     const ang = random(TWO_PI);
@@ -304,174 +351,109 @@ function burst(cx, cy, n=40, mode='confetti'){
     particles.push({x:cx,y:cy,vx,vy,life,ttl:life,c});
   }
 }
-
 function updateParticles(){
   for (let i=particles.length-1;i>=0;i--){
     const p = particles[i];
-    p.vy += 0.08;
-    p.x  += p.vx;
-    p.y  += p.vy;
-    p.ttl--;
-    if (p.ttl<=0) { particles.splice(i,1); continue; }
+    p.vy += 0.08; p.x += p.vx; p.y += p.vy; p.ttl--;
+    if (p.ttl<=0){ particles.splice(i,1); continue; }
     const a = map(p.ttl, 0, p.life, 0, 180);
-    noStroke();
-    fill(red(p.c), green(p.c), blue(p.c), a);
-    rect(p.x, p.y, 4, 4, 2);
+    noStroke(); fill(red(p.c),green(p.c),blue(p.c),a); rect(p.x,p.y,4,4,2);
   }
 }
 
-// — Levelwechsel-Animationen — (zentriert + Konfetti)
 function showLevelUp(text, opts={}, after){
-  const isEtappe = !!opts.etappe;
-
-  // Partikelstärke
-  const n = isEtappe ? 110 : 60;
-
-  // IMMER Canvas-Zentrum (nicht Spieler-Position)
-  const cx = width / 2;
-  const cy = height / 2;
+  const etappe = !!opts.etappe;
+  const n = etappe ? 110 : 60;
+  const cx = width/2, cy = height/2;
   burst(cx, cy, n, 'confetti');
 
-  // Overlay mit Zoom animieren
-  const dur = isEtappe ? 1100 : 800;
-  const scaleFrom = isEtappe ? 1.25 : 1.15;
+  const dur = etappe ? 1100 : 800;
+  const scaleFrom = etappe ? 1.25 : 1.15;
   const scaleTo   = 1.0;
 
   showFade(text, dur, after, {scaleFrom, scaleTo});
 }
-
-// Zeigt #fade mittig über dem Canvas mit Zoom
 function showFade(text, duration=550, after, scaleOpts){
-  const fade = document.getElementById('fade');
-  const t    = document.getElementById('fade-text');
-  if(!fade || !t) { after && after(); return; }
+  const fade = sel('#fade'), t = sel('#fade-text');
+  if(!fade || !t){ after&&after(); return; }
 
   t.textContent = text;
   fade.classList.remove('hidden');
-
-  // Startzustand (leicht größer/kleiner je nach Mode)
-  fade.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+  fade.style.transition = 'opacity .35s ease, transform .35s ease';
   fade.style.transformOrigin = 'center center';
   fade.style.opacity = '0';
-  fade.style.transform = `translate(-50%, -50%) scale(${scaleOpts ? scaleOpts.scaleFrom : 1.05})`;
+  fade.style.transform = `translate(-50%, -50%) scale(${scaleOpts?scaleOpts.scaleFrom:1.05})`;
 
-  // Einblenden
   requestAnimationFrame(()=>{
     fade.classList.add('show');
     fade.style.opacity = '1';
-    fade.style.transform = `translate(-50%, -50%) scale(${scaleOpts ? scaleOpts.scaleTo : 1})`;
+    fade.style.transform = `translate(-50%, -50%) scale(${scaleOpts?scaleOpts.scaleTo:1})`;
   });
-
-  // Ausblenden nach duration
   setTimeout(()=>{
     fade.style.opacity = '0';
-    // kleiner Pop beim Ausblenden
-    fade.style.transform = `translate(-50%, -50%) scale(${scaleOpts ? Math.max(0.92, scaleOpts.scaleTo - 0.08) : 0.95})`;
-    setTimeout(()=>{
-      fade.classList.remove('show');
-      fade.classList.add('hidden');
-      after && after();
-    }, 330);
+    fade.style.transform = `translate(-50%, -50%) scale(${Math.max(0.92,(scaleOpts?scaleOpts.scaleTo:1)-0.08)})`;
+    setTimeout(()=>{ fade.classList.remove('show'); fade.classList.add('hidden'); after&&after(); }, 330);
   }, duration);
 }
-
 function showToast(text){
-  const fade = document.getElementById('fade');
-  const t    = document.getElementById('fade-text');
-  if(!fade || !t) return;
-  t.textContent = text;
-  fade.classList.remove('hidden');
-  fade.style.transition = 'opacity 0.25s ease';
-  fade.style.opacity = '0';
-  fade.style.transform = `translate(-50%, -50%) scale(1)`;
-  requestAnimationFrame(()=>{
-    fade.classList.add('show');
-    fade.style.opacity = '1';
-  });
-  setTimeout(()=>{
-    fade.style.opacity = '0';
-    setTimeout(()=>{ fade.classList.remove('show'); fade.classList.add('hidden'); }, 220);
-  }, 900);
+  const fade = sel('#fade'), t = sel('#fade-text'); if(!fade||!t) return;
+  t.textContent = text; fade.classList.remove('hidden');
+  fade.style.transition='opacity .25s ease'; fade.style.opacity='0'; fade.style.transform='translate(-50%,-50%)';
+  requestAnimationFrame(()=>{ fade.classList.add('show'); fade.style.opacity='1'; });
+  setTimeout(()=>{ fade.style.opacity='0'; setTimeout(()=>{ fade.classList.remove('show'); fade.classList.add('hidden'); },220); }, 900);
 }
 
-// Finale
 function triggerFinale(){
   finale = true;
   const cx = width/2, cy = height/2;
-  for (let k=0;k<6;k++){
-    setTimeout(()=> burst(cx, cy, 120, 'finale'), k*180);
-  }
-  showFade('🎉 Herzlichen Glückwunsch! Du hast alle 100 Level gemeistert. Du bist ein echter Profi! 🎉', 3000, ()=>{
-    // optional: zurücksetzen
-    // level = 1; clearProgress(); resetLevel(false);
+  for (let k=0;k<6;k++){ setTimeout(()=> burst(cx, cy, 120, 'finale'), k*180); }
+  showFade('🎉 Herzlichen Glückwunsch! Du hast alle 100 Level gemeistert. 🎉', 3000, ()=>{
+    // optional zurücksetzen
   }, {scaleFrom:1.25, scaleTo:1.0});
 }
 
-// ---------- HUD & Utilities ----------
+// ----- HUD / Utils -----
 function updateHUD(initial=false){
-  const label = document.getElementById('levelDisplay');
+  const label = sel('#levelDisplay');
   if(label) label.textContent = `Level ${Math.min(level,MAX_LEVELS)} von ${MAX_LEVELS}`;
-
-  const fillEl = document.getElementById('progress-fill');
-  if(fillEl) fillEl.style.width = `${(Math.min(level,MAX_LEVELS) / MAX_LEVELS) * 100}%`;
-
+  const fillEl = sel('#progress-fill');
+  if(fillEl) fillEl.style.width = `${(Math.min(level,MAX_LEVELS)/MAX_LEVELS)*100}%`;
   if(initial && !running){ redraw(); }
 }
-
 function getLevelMsg(lvl, etappe=false){
   return etappe ? `Etappenziel erreicht! Level ${lvl}` : `Level ${lvl}`;
 }
 
-// Speichern
-function saveProgress(lvl){ try { localStorage.setItem(SAVE_KEY, String(lvl)); } catch(_){} }
-function loadProgress(){ try { const v = localStorage.getItem(SAVE_KEY); return v? parseInt(v,10) : null; } catch(_) { return null; } }
-function clearProgress(){ try { localStorage.removeItem(SAVE_KEY); } catch(_){} }
+function saveProgress(lvl){ try{ localStorage.setItem(SAVE_KEY, String(lvl)); }catch{} }
+function loadProgress(){ try{ const v=localStorage.getItem(SAVE_KEY); return v?parseInt(v,10):null; }catch{ return null; } }
+function clearProgress(){ try{ localStorage.removeItem(SAVE_KEY); }catch{} }
 
-// Start‑Button‑Beschriftung dynamisch
 function updateStartButtonLabel(){
-  const btn = document.getElementById('start-btn');
-  if (!btn) return;
+  const btn = sel('#start-btn'); if(!btn) return;
   const saved = loadProgress();
-  btn.textContent = saved ? `▶️ Fortfahren (Level ${saved})` : "▶️ Fortfahren";
+  btn.textContent = saved ? `▶ Fortfahren (Level ${saved})` : '▶ Fortfahren';
 }
 
-// Helpers
-function getTopMostPlatform(){
-  let m = platforms[0];
-  for (const p of platforms) if (p.y < m.y) m = p;
-  return m;
-}
-function getBottomMostPlatform(){
-  let m = platforms[0];
-  for (const p of platforms) if (p.y > m.y) m = p;
-  return m;
-}
+function getTopMostPlatform(){ return platforms.reduce((m,p)=> p.y<m.y?p:m, platforms[0]); }
+function getBottomMostPlatform(){ return platforms.reduce((m,p)=> p.y>m.y?p:m, platforms[0]); }
+
 function drawPlatform(p){
   noStroke();
-
-  // Farbvariante je Level – gedimmt, nicht grell
+  // Farbzyklus gedimmt
   let col;
-  if (level % 3 === 1) col = color(...UI_PINK);                   // Pink (gedimmt)
-  else if (level % 3 === 2) col = color(176, 122, 255);           // Violett
-  else col = color(102, 234, 255);                                // Cyan
-
-  fill(col);
-  rect(p.x, p.y, p.w, p.h, 6);
+  if (level % 3 === 1) col = color(...UI_PINK);
+  else if (level % 3 === 2) col = color(176,122,255);
+  else col = color(102,234,255);
+  fill(col); rect(p.x,p.y,p.w,p.h,6);
 
   // sanfter Glow
-  push();
-  drawingContext.shadowColor = col.toString();
-  drawingContext.shadowBlur  = 8;
-  fill(red(col), green(col), blue(col), 90);
-  rect(p.x, p.y, p.w, p.h, 6);
-  pop();
+  push(); drawingContext.shadowColor = col.toString(); drawingContext.shadowBlur = 8;
+  fill(red(col),green(col),blue(col),90); rect(p.x,p.y,p.w,p.h,6); pop();
 }
 function drawPlayer(){
-  noStroke();
-  fill(102,234,255);
-  rect(player.x, player.y, player.w, player.h, 5);
-  // Mini-Schatten
-  fill(0,0,0,40);
-  rect(player.x+2, player.y+player.h-3, player.w-4, 3, 2);
+  noStroke(); fill(102,234,255); rect(player.x,player.y,player.w,player.h,5);
+  fill(0,0,0,40); rect(player.x+2, player.y+player.h-3, player.w-4, 3, 2);
 }
-function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+function sel(q){ return document.querySelector(q); }

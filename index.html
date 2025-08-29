@@ -1,21 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Block Adventure</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-
-  <!-- 90%-Zoom für die gesamte Seite -->
+  <!-- Desktop: 90% Zoom, auf Mobile nicht erzwingen -->
   <style>
-    body { zoom: 90%; }
-    #subtitle {
-      font-size: 14px;
-      font-weight: normal;
-      margin-left: 10px;
-      color: #ccc;
-    }
+    @media (pointer:fine) and (min-width: 901px){ body{ zoom:90%; } }
   </style>
 </head>
 <body>
@@ -25,33 +19,32 @@
   </h1>
 
   <!-- Buttons -->
-  <div>
+  <div id="top-buttons">
     <button id="start-btn">▶ Fortfahren</button>
     <button id="restart-btn">⟳ Neustart</button>
     <button id="save-btn">💾 Speichern</button>
   </div>
 
-  <!-- Spielfeld -->
+  <!-- Spielfeld-Kasten -->
   <div id="canvas-container">
-    <!-- WICHTIG: Kein #levelText mehr! -->
-    <!-- Overlay für Level-Animation (Text + Konfetti) -->
-    <div id="fade" class="fade hidden">
-      <span id="fade-text"></span>
-    </div>
+    <!-- Level-Overlay (Text + Konfetti) -->
+    <div id="fade" class="fade hidden"><span id="fade-text"></span></div>
   </div>
 
   <!-- Fortschritt -->
-  <div id="progress-container">
-    <div id="progress-fill"></div>
-  </div>
+  <div id="progress-container"><div id="progress-fill"></div></div>
   <div id="levelDisplay">Level 1 von 100</div>
 
-  <!-- Steuerung -->
-  <div id="controls">
-    ⬅ ➡ bewegen &nbsp;&nbsp; ␣ springen &nbsp;&nbsp; 💾 Speichern (Taste S)
+  <!-- Steuerung (Desktop-Hinweis) -->
+  <div id="controls">⬅ ➡ bewegen &nbsp;&nbsp; ␣ springen &nbsp;&nbsp; 💾 Speichern (Taste S)</div>
+
+  <!-- Touch-Steuerung (eingeblendet nur auf Touch-Geräten) -->
+  <div id="touch-controls" aria-label="Touch controls">
+    <button id="btn-left"  aria-label="Links">◀</button>
+    <button id="btn-jump"  aria-label="Springen">⬆</button>
+    <button id="btn-right" aria-label="Rechts">▶</button>
   </div>
 
-  <!-- Footer -->
   <footer>Made by Lara Jacqueline Volkmer</footer>
 
   <script src="script.js"></script>
