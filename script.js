@@ -1,6 +1,6 @@
 
 /* =========================
-   Block Adventure – v.final (Layout + Spacing)
+   Block Adventure – Canvas-Fix
    ========================= */
 
 let canvas;
@@ -18,12 +18,13 @@ let platforms = [];
 let level = 1;
 const maxLevels = 100;
 
-/* ---------- Setup ---------- */
 function setup(){
   canvas = createCanvas(LOGIC_W, LOGIC_H);
   canvas.parent("game-container");
 
+  // ► WICHTIG: nach dem Einfügen einmal Layout erzwingen
   fitCanvasToContainer();
+  setTimeout(fitCanvasToContainer, 0);
   window.addEventListener('resize', fitCanvasToContainer);
 
   initPlayer();
@@ -34,29 +35,27 @@ function setup(){
   window.addEventListener('blur', ()=>{ leftHeld=false; rightHeld=false; });
 }
 
-/* Canvas passt sich an Container an (p5-Logik bleibt 560x560) */
 function fitCanvasToContainer(){
   const holder = document.getElementById('game-container');
   if (!holder) return;
+  // Canvas füllt den Container; p5 rechnet weiter in LOGIC_W/H
   canvas.elt.style.width  = '100%';
-  canvas.elt.style.height = 'auto';
+  canvas.elt.style.height = '100%';
 }
 
-/* ---------- Draw Loop ---------- */
 function draw(){
   background(14,18,36);
 
-  // Plattformen (Neonrosa, aber moderat)
+  // Plattformen
   noStroke();
   fill(201,93,185);
   for (const p of platforms) rect(p.x, p.y, p.w, p.h, 8);
 
-  // Bewegung
   const dir = (rightHeld?1:0) - (leftHeld?1:0);
   player.prevY = player.y;
   player.x += dir * speed;
 
-  // Wrap links/rechts
+  // Wrap
   if (player.x < -player.w) player.x = width;
   if (player.x > width)     player.x = -player.w;
 
@@ -65,7 +64,7 @@ function draw(){
   player.y  += player.vy;
   player.onGround = false;
 
-  // Kollisionen (nur von oben)
+  // Kollisionen (Top-only)
   for (const p of platforms){
     const overlapX = player.x + player.w > p.x && player.x < p.x + p.w;
     const falling  = player.vy >= 0;
@@ -77,11 +76,11 @@ function draw(){
     }
   }
 
-  // Spieler
+  // Player
   fill(0,204,255);
   rect(player.x, player.y, player.w, player.h, 6);
 
-  // Ziel (oberste Plattform)
+  // Zielprüfung
   const top = platforms[platforms.length - 1];
   const onTop = player.onGround &&
     Math.abs(player.y + player.h - top.y) < 0.5 &&
@@ -90,11 +89,11 @@ function draw(){
 
   if (onTop) nextLevel();
 
-  // Fail (unterhalb des Fensters)
+  // Fail
   if (player.y > height + 60) resetLevel();
 }
 
-/* ---------- Input ---------- */
+/* -------- Input -------- */
 function keyPressed(){
   if (keyCode === LEFT_ARROW)  leftHeld  = true;
   if (keyCode === RIGHT_ARROW) rightHeld = true;
@@ -106,7 +105,7 @@ function keyReleased(){
   if (keyCode === RIGHT_ARROW) rightHeld = false;
 }
 
-/* ---------- Touch ---------- */
+/* Touch */
 function hold(el, on, off){
   el.addEventListener('touchstart', e=>{ e.preventDefault(); on();  }, {passive:false});
   el.addEventListener('touchend',   e=>{ e.preventDefault(); off(); }, {passive:false});
@@ -124,36 +123,27 @@ function hookUI(){
   }, {passive:false});
 }
 
-/* ---------- Spiellogik ---------- */
+/* -------- Logic -------- */
 function initPlayer(){ player = { x: 48, y: height - 64, w: 28, h: 28, vy: 0, onGround:false, prevY: height-64 }; }
 function resetLevel(){ initPlayer(); generatePlatforms(level); updateUI(); }
 function nextLevel(){
-  if (level < maxLevels){
-    level++;
-    resetLevel();
-    levelUpFX(level);
-  } else {
-    victoryFX();
-  }
+  if (level < maxLevels){ level++; resetLevel(); levelUpFX(level); }
+  else { victoryFX(); }
 }
 
-/* ---------- Plattformen: weiter auseinander ---------- */
+/* Plattformen: weiter auseinander, aber erreichbar */
 function seededRandom(seed){ let x = (seed * 9301 + 49297) % 233280; return ()=>{ x = (x*9301 + 49297) % 233280; return x/233280; }; }
 
 function generatePlatforms(lvl){
   platforms = [];
   const rand = seededRandom(lvl*12345+7);
 
-  // max 12 Plattformen, Beginn bei 3, alle 3 Level +1
   const count = Math.min(3 + Math.floor(lvl/3), 12);
-
   const topMargin = 80, bottomMargin = 60;
   const verticalSpan = height - topMargin - bottomMargin;
 
-  // Mehr vertikaler Abstand (20% lockerer)
-  const gapY = verticalSpan / (count - 1) * 1.2;
+  const gapY = verticalSpan / (count - 1) * 1.2; // 20% lockerer
 
-  // Leicht schrumpfende Breite
   const baseW = 130, minW = 80;
   const shrink = Math.min(50, Math.floor(lvl*0.6));
 
@@ -162,7 +152,6 @@ function generatePlatforms(lvl){
     const w = Math.max(minW, baseW - shrink);
     const y = height - bottomMargin - i*gapY;
 
-    // Abwechselnd links/rechts, stärker gespreizt
     const half = width/2, margin=24;
     let x;
     if (i%2===0){
@@ -173,7 +162,6 @@ function generatePlatforms(lvl){
       x = minX + rand()*Math.max(12, maxX-minX);
     }
 
-    // Verhindere „übereinander kleben“
     if (Math.abs(x - lastX) < 80){
       x += (x < half ? 100 : -100);
       x = Math.min(Math.max(margin, x), width - w - margin);
@@ -184,7 +172,7 @@ function generatePlatforms(lvl){
   }
 }
 
-/* ---------- UI & FX ---------- */
+/* UI / FX */
 function updateUI(){
   document.getElementById('level-info').textContent = `Level ${level} von ${maxLevels}`;
   document.getElementById('progress-bar').style.width = (level/maxLevels*100)+'%';
@@ -215,7 +203,6 @@ function levelUpFX(lvl){
   setTimeout(()=> tag.style.opacity='0', 900);
   setTimeout(()=> tag.remove(), 1200);
 
-  // Konfetti
   for (let i=0;i<24;i++){
     const dot = document.createElement('div');
     const size = 6 + Math.random()*6;
