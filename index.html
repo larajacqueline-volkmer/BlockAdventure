@@ -6,41 +6,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Block Adventure</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <link rel="manifest" href="manifest.json" />
 </head>
 <body>
   <header class="wrap">
     <h1>Block Adventure</h1>
     <p class="subtitle">Reach the top block to level up!</p>
-
-    <nav class="menu">
+    <div class="menu">
       <button id="continueButton" class="btn primary">▶ Fortfahren</button>
       <button id="restartButton" class="btn">⟳ Neustart</button>
       <button id="saveButton" class="btn">💾 Speichern</button>
-    </nav>
+    </div>
   </header>
 
   <main class="wrap">
-    <section id="game-frame">
+    <div id="game-frame">
       <div id="game-container"></div>
-      <!-- Level-Overlay (wird per JS befüllt) -->
-      <div id="overlay"></div>
-    </section>
+      <div id="overlay" aria-hidden="true"></div>
+    </div>
 
     <div id="level-info">Level 1 von 100</div>
-    <div class="progress"><div id="progress-bar"></div></div>
+    <div class="progress" aria-hidden="true">
+      <div id="progress-bar"></div>
+    </div>
 
-    <p class="hint">← → bewegen  ␣ springen  💾 Speichern (S)</p>
-    <p class="credit">Made by Lara Jacqueline Volkmer</p>
+    <div class="hint">← → bewegen &nbsp; • &nbsp; Space springen &nbsp; • &nbsp; S speichern</div>
+    <div class="credit">Made by Lara Jacqueline Volkmer</div>
   </main>
 
-  <!-- Mobile Touch Controls -->
-  <div id="touch-controls" aria-label="Mobile controls">
+  <!-- Touch-Steuerung (mobil) -->
+  <div id="touch-controls" class="wrap">
     <button id="leftBtn"  class="btn touch">◀</button>
-    <button id="jumpBtn"  class="btn touch">⬆</button>
+    <button id="jumpBtn"  class="btn touch">↑</button>
     <button id="rightBtn" class="btn touch">▶</button>
   </div>
 
+  <!-- p5.js & Spielcode -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"
+          integrity="sha512-1t3csHqKf7y0c1nQO+5+0qfwwgI9tGQNuXW14o9G7Lpd5JwE8E0b0pG8cDWuM4R7i1ZrXb8v1rFzU7K8k9YdQg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="script.js"></script>
 </body>
 </html>
