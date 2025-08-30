@@ -3,45 +3,39 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Block Adventure</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-  <!-- Desktop: 90% Zoom, Mobile nativ skalieren -->
-  <style>
-    @media (pointer:fine) and (min-width: 901px){ body{ zoom:90%; } }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 </head>
 <body>
-  <div class="page">
-    <h1>
-      Block Adventure
-      <span id="subtitle">Reach the top block to level up!</span>
-    </h1>
-
-    <div id="top-buttons">
-      <button id="start-btn">▶ Fortfahren</button>
-      <button id="restart-btn">⟳ Neustart</button>
-      <button id="save-btn">💾 Speichern</button>
+  <header>
+    <h1>Block Adventure</h1>
+    <p class="subtitle">Reach the top block to level up!</p>
+    <div class="menu-buttons">
+      <button id="continueButton">▶ Fortfahren</button>
+      <button id="restartButton">⟳ Neustart</button>
+      <button id="saveButton">💾 Speichern</button>
     </div>
+  </header>
 
-    <div id="canvas-container">
-      <div id="fade" class="fade hidden"><span id="fade-text"></span></div>
+  <main>
+    <div id="game-container"></div>
+    <div id="level-info">Level 1 von 100</div>
+    <div class="progress">
+      <div id="progress-bar"></div>
     </div>
+  </main>
 
-    <div id="progress-container"><div id="progress-fill"></div></div>
-    <div id="levelDisplay">Level 1 von 100</div>
+  <footer>
+    <p>← → bewegen &nbsp;&nbsp; ␣ springen &nbsp;&nbsp; 💾 Speichern (Taste S)</p>
+    <p>Made by Lara Jacqueline Volkmer</p>
+  </footer>
 
-    <div id="controls">⬅ ➡ bewegen &nbsp;&nbsp; ␣ springen &nbsp;&nbsp; 💾 Speichern (Taste S)</div>
-
-    <footer>Made by Lara Jacqueline Volkmer</footer>
-  </div>
-
-  <!-- Touch-Controls werden nur auf Touch-Geräten angezeigt -->
-  <div id="touch-controls" aria-label="Touch controls">
-    <button id="btn-left"  aria-label="Links">◀</button>
-    <button id="btn-jump"  aria-label="Springen">⬆</button>
-    <button id="btn-right" aria-label="Rechts">▶</button>
+  <div id="touch-controls">
+    <button id="leftBtn">◀</button>
+    <button id="jumpBtn">⬆</button>
+    <button id="rightBtn">▶</button>
   </div>
 
   <script src="script.js"></script>
