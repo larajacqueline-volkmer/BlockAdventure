@@ -1,59 +1,76 @@
 
-/* === Block Adventure – Mobile + Desktop === */
+/* ===== Layout-Grundlagen ===== */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{
   background:#0a0c28; color:#fff;
   font-family:'Poppins','Rajdhani',system-ui,sans-serif;
-  text-align:center; overflow-x:hidden;
+  overflow-x:hidden;
 }
 
-/* Titel + Untertitel */
+/* Zentrierter Wrapper – alles hängt an dieser Breite */
+.page{
+  width:min(720px, 92vw);
+  margin: 0 auto;
+  padding: 8px 0 16px;
+  /* Fallback zum Desktop-Zoom (nur optisch), Lintern zuliebe ergänzt */
+  transform-origin: top center;
+}
+
+/* Titel */
 h1{
   font-family:'Rajdhani',sans-serif; font-weight:700;
-  font-size:2.3rem; margin:18px 0 8px;
+  font-size:2.25rem; margin:18px 0 8px;
   color:#d457ae;
+  text-align:left;
   text-shadow:0 0 6px rgba(212,87,174,.55),0 0 14px rgba(212,87,174,.35);
 }
-#subtitle{ font-size:.95rem; margin-left:10px; color:#cfcfd7; opacity:.9 }
+#subtitle{
+  font-size:.95rem; margin-left:10px; color:#cfcfd7; opacity:.9;
+}
 
-/* Top-Buttons */
+/* Top-Buttons – mittig auf Wrapperbreite */
+#top-buttons{
+  display:flex; justify-content:center; gap:12px;
+  flex-wrap:wrap; margin:6px 0 10px;
+}
 #top-buttons button{
   background:#171a2f; border:2px solid #66eaff; color:#66eaff;
-  padding:8px 16px; margin:6px 8px; border-radius:10px;
-  font-size:.95rem; cursor:pointer;
-  transition:transform .12s, background .18s, color .18s, box-shadow .18s;
+  padding:8px 16px; border-radius:10px; font-size:.95rem;
   box-shadow:0 0 10px rgba(102,234,255,.25);
+  transition:transform .12s, background .18s, color .18s;
+  cursor:pointer;
 }
 #top-buttons button:hover{ background:#66eaff; color:#051017; transform:translateY(-2px) }
 
-/* Spielfeld-Kasten – Größe kommt als CSS-Variablen von JS */
+/* Spielfeld-Kasten – **immer** exakt so breit wie .page */
 #canvas-container{
-  --cw: 720px; --ch: 420px;
-  position:relative; display:inline-block;
-  width:var(--cw); height:var(--ch);
-  margin:10px auto 10px; padding:10px; border-radius:16px;
+  position:relative; width:100%;
+  aspect-ratio: 12 / 7;             /* 720x420 -> 12:7 */
+  border-radius:16px; padding:10px;
   background:#0b0f2b; border:3px solid #d457ae;
-  box-shadow:0 0 22px rgba(212,87,174,.55),0 0 44px rgba(212,87,174,.35),inset 0 0 10px rgba(212,87,174,.25);
+  box-shadow:0 0 22px rgba(212,87,174,.55),0 0 44px rgba(212,87,174,.35), inset 0 0 10px rgba(212,87,174,.25);
+  margin: 6px 0 8px;
 }
-#canvas-container canvas{display:block;width:100%;height:100%;border-radius:12px}
+#canvas-container canvas{
+  width:100%; height:100%; border-radius:12px; display:block;
+}
 
-/* Level-Overlay */
+/* Level-Overlay (mittig, groß) */
 .fade{
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(1);
   z-index:5; font-size:2.1rem; font-weight:700; color:#fff;
   background:rgba(0,0,0,.45); padding:14px 24px; border-radius:12px;
   border:1px solid rgba(255,255,255,.15); box-shadow:0 8px 22px rgba(0,0,0,.45);
-  opacity:0; transition:opacity .35s, transform .35s; pointer-events:none;
+  opacity:0; pointer-events:none; transition:opacity .35s, transform .35s;
 }
 .fade.show{opacity:1}
 .hidden{display:none}
 
-/* Fortschritt */
+/* Fortschritt/Beschriftung – exakt auf Wrapperbreite */
 #progress-container{
-  width:90%; max-width:var(--cw);
-  height:12px; margin:8px auto 6px; border-radius:6px;
-  background:rgba(255,255,255,.08); overflow:hidden;
+  width:100%; height:12px; border-radius:6px; overflow:hidden;
+  background:rgba(255,255,255,.08);
   box-shadow:0 0 8px rgba(212,87,174,.35);
 }
 #progress-fill{
@@ -61,31 +78,44 @@ h1{
   background:linear-gradient(90deg,#08f,#d457ae,#b07aff);
   transition:width .3s ease;
 }
-#levelDisplay{margin-top:6px;font-size:1rem;font-weight:600;letter-spacing:.2px;opacity:.95}
-#controls{margin:5px 0 8px;font-size:.9rem;opacity:.9}
+#levelDisplay{ margin-top:6px; font-size:1rem; font-weight:600; letter-spacing:.2px; opacity:.95 }
+
+#controls{ margin:6px 0 8px; font-size:.9rem; opacity:.9 }
 
 /* Footer */
-footer{margin:6px 0 14px;font-size:.86rem;color:#aab;opacity:.9}
+footer{ margin:6px 0 14px; font-size:.86rem; color:#aab; opacity:.9 }
 
-/* Touch Controls – nur auf Touch anzeigen */
+/* Touch-Controls – nur auf Touch anzeigen; immer mittig und schmaler als Seite */
 #touch-controls{
-  display:none; position:fixed; left:0; right:0; bottom:env(safe-area-inset-bottom, 10px);
-  margin:auto; width:min(480px,92vw); justify-content:space-between; gap:14px;
-  z-index:9; padding:6px 10px;
+  display:none; /* Standard: aus */
+  position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom,0) + 10px);
+  margin:auto; width:min(480px, 92vw);
   background:rgba(5,7,20,.35); backdrop-filter:blur(6px);
   border:1px solid rgba(255,255,255,.12); border-radius:14px;
   box-shadow:0 10px 24px rgba(0,0,0,.35);
+  padding:6px 10px; z-index:9;
+
+  justify-content:space-between; gap:14px;
 }
 #touch-controls button{
   flex:1; font-size:1.25rem; padding:10px 0;
   background:#171a2f; color:#66eaff; border:2px solid #66eaff; border-radius:10px;
-}
-@media (hover:none), (pointer:coarse){
-  #controls{ display:none; }           /* Desktop-Hinweis ausblenden */
-  #touch-controls{ display:flex; }     /* Touch-Buttons zeigen */
+  cursor:pointer;
 }
 
-/* Responsiv: Canvas skaliert über Variablen */
-@media (max-width: 860px){
-  h1{font-size:2rem}
+/* Touch ein -> Buttons zeigen */
+@media (hover:none), (pointer:coarse){
+  #controls{ display:none; }
+  #touch-controls{ display:flex; }
+}
+
+/* Desktop: optisches 90%-Zoom, mit Fallback ohne 'zoom' Warnung */
+@media (pointer:fine) and (min-width: 901px){
+  body{ zoom:90%; }               /* praktisch, aber non-standard */
+  .page{ transform:scale(1); }    /* Fallback neutral – Layout bleibt stabil */
+}
+
+/* Kleinere Titelgröße auf sehr schmalen Screens */
+@media (max-width: 380px){
+  h1{ font-size:2rem }
 }

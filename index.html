@@ -7,45 +7,42 @@
   <title>Block Adventure</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-  <!-- Desktop: 90% Zoom, auf Mobile nicht erzwingen -->
+  <!-- Desktop: 90% Zoom, Mobile nativ skalieren -->
   <style>
     @media (pointer:fine) and (min-width: 901px){ body{ zoom:90%; } }
   </style>
 </head>
 <body>
-  <h1>
-    Block Adventure
-    <span id="subtitle">Reach the top block to level up!</span>
-  </h1>
+  <div class="page">
+    <h1>
+      Block Adventure
+      <span id="subtitle">Reach the top block to level up!</span>
+    </h1>
 
-  <!-- Buttons -->
-  <div id="top-buttons">
-    <button id="start-btn">▶ Fortfahren</button>
-    <button id="restart-btn">⟳ Neustart</button>
-    <button id="save-btn">💾 Speichern</button>
+    <div id="top-buttons">
+      <button id="start-btn">▶ Fortfahren</button>
+      <button id="restart-btn">⟳ Neustart</button>
+      <button id="save-btn">💾 Speichern</button>
+    </div>
+
+    <div id="canvas-container">
+      <div id="fade" class="fade hidden"><span id="fade-text"></span></div>
+    </div>
+
+    <div id="progress-container"><div id="progress-fill"></div></div>
+    <div id="levelDisplay">Level 1 von 100</div>
+
+    <div id="controls">⬅ ➡ bewegen &nbsp;&nbsp; ␣ springen &nbsp;&nbsp; 💾 Speichern (Taste S)</div>
+
+    <footer>Made by Lara Jacqueline Volkmer</footer>
   </div>
 
-  <!-- Spielfeld-Kasten -->
-  <div id="canvas-container">
-    <!-- Level-Overlay (Text + Konfetti) -->
-    <div id="fade" class="fade hidden"><span id="fade-text"></span></div>
-  </div>
-
-  <!-- Fortschritt -->
-  <div id="progress-container"><div id="progress-fill"></div></div>
-  <div id="levelDisplay">Level 1 von 100</div>
-
-  <!-- Steuerung (Desktop-Hinweis) -->
-  <div id="controls">⬅ ➡ bewegen &nbsp;&nbsp; ␣ springen &nbsp;&nbsp; 💾 Speichern (Taste S)</div>
-
-  <!-- Touch-Steuerung (eingeblendet nur auf Touch-Geräten) -->
+  <!-- Touch-Controls werden nur auf Touch-Geräten angezeigt -->
   <div id="touch-controls" aria-label="Touch controls">
     <button id="btn-left"  aria-label="Links">◀</button>
     <button id="btn-jump"  aria-label="Springen">⬆</button>
     <button id="btn-right" aria-label="Rechts">▶</button>
   </div>
-
-  <footer>Made by Lara Jacqueline Volkmer</footer>
 
   <script src="script.js"></script>
 </body>
