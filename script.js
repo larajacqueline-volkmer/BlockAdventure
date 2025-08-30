@@ -1,51 +1,64 @@
 
-/* ===============================
-   Block Adventure – stabile Eingaben & Layout
-   =============================== */
-
-let player, gravity = 0.6, jumpForce = -12, baseSpeed = 5;
-let moveDir = 0;          // -1, 0, 1 – verhindert „Selbstlaufen“
-let platforms = [];
-let level = 1, maxLevels = 100;
+/* ======================================================
+   Block Adventure (p5.js) – stabile Eingabe & Layout-Fix
+   ====================================================== */
 
 let canvas;
+const LOGIC_W = 560, LOGIC_H = 560;
+
+let player;
+const gravity = 0.6;
+const jumpForce = -12;
+const speed = 5;
+
+let leftHeld = false;
+let rightHeld = false;
+
+let platforms = [];
+let level = 1;
+const maxLevels = 100;
 
 /* ---------- Setup ---------- */
 function setup(){
-  canvas = createCanvas(560, 560);   // feste Logikgröße, skaliert per CSS
+  canvas = createCanvas(LOGIC_W, LOGIC_H);
   canvas.parent("game-container");
   initPlayer();
   generatePlatforms(level);
-  updateLevelInfo();
+  updateUI();
   hookUI();
+  // Safety: stop movement if Fenster verliert Fokus
+  window.addEventListener('blur', ()=>{ leftHeld=false; rightHeld=false; });
 }
 
 /* ---------- Draw Loop ---------- */
 function draw(){
-  background(14, 18, 36);
+  background(14,18,36);
 
-  // Plattformen
+  // Plattformen zeichnen
   noStroke();
-  fill(216,106,200); // var(--neon) nah
-  for (const p of platforms){
-    rect(p.x, p.y, p.w, p.h, 8);
-  }
+  fill(201,93,185); // dezentes Neon
+  for (const p of platforms) rect(p.x, p.y, p.w, p.h, 8);
 
-  // Player bewegen
-  player.x += moveDir * baseSpeed;
-  player.vy += gravity;
-  player.y += player.vy;
-  player.onGround = false;
+  // Bewegung
+  const dir = (rightHeld?1:0) - (leftHeld?1:0);
+  player.prevY = player.y;
+  player.x += dir * speed;
 
-  // Wrap an Seitenrändern
+  // Wrap links/rechts
   if (player.x < -player.w) player.x = width;
   if (player.x > width)     player.x = -player.w;
 
-  // Kollision Plattformen (nur von oben)
+  // Physik
+  player.vy += gravity;
+  player.y  += player.vy;
+  player.onGround = false;
+
+  // Kollisionen (nur von oben)
   for (const p of platforms){
-    const hitsHorizontal = player.x + player.w > p.x && player.x < p.x + p.w;
-    const hitsFromTop    = player.y + player.h <= p.y + 10 && player.y + player.h >= p.y - 8;
-    if (hitsHorizontal && hitsFromTop && player.vy >= 0){
+    const overlapX = player.x + player.w > p.x && player.x < p.x + p.w;
+    const falling  = player.vy >= 0;
+    const crossing = player.prevY + player.h <= p.y && player.y + player.h >= p.y;
+    if (overlapX && falling && crossing){
       player.y = p.y - player.h;
       player.vy = 0;
       player.onGround = true;
@@ -53,53 +66,53 @@ function draw(){
   }
 
   // Spieler zeichnen
-  fill(0, 204, 255);
+  fill(0,204,255);
   rect(player.x, player.y, player.w, player.h, 6);
 
-  // Siegbedingung: auf oberster Plattform stehen
+  // Siegbedingung: wirklich AUF der obersten Plattform stehen
   const top = platforms[platforms.length - 1];
-  const onTop =
-    player.y + player.h <= top.y + 4 &&
-    player.x + player.w * 0.5 > top.x &&
-    player.x + player.w * 0.5 < top.x + top.w;
+  const onTop = player.onGround &&
+    Math.abs(player.y + player.h - top.y) < 0.5 &&
+    (player.x + player.w/2) > top.x &&
+    (player.x + player.w/2) < top.x + top.w;
 
   if (onTop) nextLevel();
-  if (player.y > height + 40) restartLevel(); // runtergefallen
+
+  // runtergefallen -> Level neu
+  if (player.y > height + 60) resetLevel();
 }
 
-/* ---------- Eingabe: Tastatur ---------- */
+/* ---------- Eingabe Tastatur ---------- */
 function keyPressed(){
-  if (keyCode === LEFT_ARROW)  moveDir = -1;
-  if (keyCode === RIGHT_ARROW) moveDir =  1;
-  if (key === ' ' && player.onGround) player.vy = jumpForce;
+  if (keyCode === LEFT_ARROW)  leftHeld  = true;
+  if (keyCode === RIGHT_ARROW) rightHeld = true;
+  if ((key === ' ' || key === 'Spacebar') && player.onGround) player.vy = jumpForce;
   if (key === 's' || key === 'S') saveProgress();
 }
 function keyReleased(){
-  if ((keyCode === LEFT_ARROW && moveDir === -1) ||
-      (keyCode === RIGHT_ARROW && moveDir === 1)) {
-    moveDir = 0;
-  }
+  if (keyCode === LEFT_ARROW)  leftHeld  = false;
+  if (keyCode === RIGHT_ARROW) rightHeld = false;
 }
 
-/* ---------- Eingabe: Touch (gedrückt halten) ---------- */
-function setTouchHold(el, startFn, endFn){
-  el.addEventListener('touchstart', e => { e.preventDefault(); startFn(); }, {passive:false});
-  el.addEventListener('touchend',   e => { e.preventDefault(); endFn();   }, {passive:false});
+/* ---------- Touch/Hold ---------- */
+function hold(el, on, off){
+  el.addEventListener('touchstart', e=>{ e.preventDefault(); on();  }, {passive:false});
+  el.addEventListener('touchend',   e=>{ e.preventDefault(); off(); }, {passive:false});
 }
 function hookUI(){
-  // Buttons
+  // Menü
   document.getElementById('continueButton').onclick = continueFromSave;
-  document.getElementById('restartButton').onclick  = () => { level = 1; resetLevel(); };
+  document.getElementById('restartButton').onclick  = ()=>{ level=1; resetLevel(); };
   document.getElementById('saveButton').onclick     = saveProgress;
 
-  // Touch-Steuerung halten
-  setTouchHold(document.getElementById('leftBtn'),
-    () => moveDir = -1,
-    () => moveDir = (keyIsDown(RIGHT_ARROW)?1:0)
+  // Touch
+  hold(document.getElementById('leftBtn'),
+    ()=> leftHeld = true,
+    ()=> leftHeld = false
   );
-  setTouchHold(document.getElementById('rightBtn'),
-    () => moveDir =  1,
-    () => moveDir = (keyIsDown(LEFT_ARROW)?-1:0)
+  hold(document.getElementById('rightBtn'),
+    ()=> rightHeld = true,
+    ()=> rightHeld = false
   );
   document.getElementById('jumpBtn').addEventListener('touchstart', e=>{
     e.preventDefault();
@@ -109,63 +122,80 @@ function hookUI(){
 
 /* ---------- Spiellogik ---------- */
 function initPlayer(){
-  player = { x: 48, y: height - 64, w: 28, h: 28, vy: 0, onGround: false };
+  player = { x: 48, y: height - 64, w: 28, h: 28, vy: 0, onGround:false, prevY: height-64 };
 }
 
 function resetLevel(){
   initPlayer();
   generatePlatforms(level);
-  updateLevelInfo();
+  updateUI();
 }
 
 function nextLevel(){
   if (level < maxLevels){
     level++;
     resetLevel();
-    levelUpFX();
-  }else{
+    levelUpFX(level);
+  } else {
     victoryFX();
   }
 }
 
-function restartLevel(){ resetLevel(); }
+/* ---------- Plattformen ---------- */
+/* Reproduzierbarer „zufälliger“ Generator auf Basis der Levelnummer,
+   damit die Plattformen verteilt sind und NICHT zu Brocken klumpen. */
+function seededRandom(seed){
+  // LCG
+  let x = (seed * 9301 + 49297) % 233280;
+  return function(){
+    x = (x * 9301 + 49297) % 233280;
+    return x / 233280;
+  };
+}
 
-/* ---------- Plattform-Generierung (abwechselnd L/R, Mindestabstand) ---------- */
 function generatePlatforms(lvl){
   platforms = [];
-  const count = Math.min(3 + Math.floor(lvl/2), 15);
-  const gapY  = (height - 100) / count;
+
+  const rand = seededRandom(lvl * 12345 + 7);
+  const count = Math.min(3 + Math.floor(lvl/3), 12);     // weniger Plattformen
+  const topMargin = 80, bottomMargin = 60;
+  const verticalSpan = height - topMargin - bottomMargin;
+  const gapY = verticalSpan / (count - 1);
+
+  const baseW = 130, minW = 80;
+  const shrink = Math.min(50, Math.floor(lvl*0.6));
+
   let lastX = -999;
 
   for (let i=0;i<count;i++){
-    const y = height - 60 - i * gapY;
-    const half = width/2;
-    const margin = 36;
-    let x;
+    const w = Math.max(minW, baseW - shrink);
+    const y = height - bottomMargin - i * gapY;
 
-    // abwechselnd Links/Rechts, mit zufälligem Versatz
+    // Abwechselnd links/rechts + Jitter – mit Mindestabstand
+    const half = width/2;
+    const margin = 24;
+    let x;
     if (i % 2 === 0){
-      x = margin + Math.random() * (half - margin*2);
+      const minX = margin, maxX = half - w - 40;
+      x = minX + rand() * Math.max(10, maxX - minX);
     }else{
-      x = half + margin + Math.random() * (half - margin*2);
+      const minX = half + 40, maxX = width - margin - w;
+      x = minX + rand() * Math.max(10, maxX - minX);
     }
 
-    // Mindestabstand in X
     if (Math.abs(x - lastX) < 70){
       x += (x < half ? 90 : -90);
-      x = Math.min(Math.max(margin, x), width - 140);
+      x = Math.min(Math.max(margin, x), width - w - margin);
     }
 
-    const w = 120; // einheitliche Breite
     platforms.push({x, y, w, h: 14});
     lastX = x;
   }
 }
 
-/* ---------- UI & Speicher ---------- */
-function updateLevelInfo(){
-  const info = document.getElementById('level-info');
-  info.textContent = `Level ${level} von ${maxLevels}`;
+/* ---------- UI ---------- */
+function updateUI(){
+  document.getElementById('level-info').textContent = `Level ${level} von ${maxLevels}`;
   document.getElementById('progress-bar').style.width = (level/maxLevels*100)+'%';
   document.getElementById('continueButton').textContent = `▶ Fortfahren (Level ${level})`;
 }
@@ -175,51 +205,50 @@ function saveProgress(){
   toast('Gespeichert!');
 }
 function continueFromSave(){
-  const saved = Number(localStorage.getItem('blockAdventureLevel') || '1');
+  const saved = Number(localStorage.getItem('blockAdventureLevel')||'1');
   level = Math.min(Math.max(1, saved), maxLevels);
   resetLevel();
 }
 
 /* ---------- FX ---------- */
-function levelUpFX(){
-  // Text zentriert + leichtes Konfetti
+function levelUpFX(lvl){
+  const overlay = document.getElementById('overlay');
+
+  // Text
   const tag = document.createElement('div');
-  tag.textContent = `Level ${level}`;
+  tag.textContent = `Level ${lvl}`;
   Object.assign(tag.style, {
-    position:'fixed', left:'50%', top:'50%',
+    position:'absolute', left:'50%', top:'50%',
     transform:'translate(-50%,-50%)',
-    color:'#d86ac8', fontWeight:'800',
+    color:'#c95db9', fontWeight:'800',
     fontSize:'clamp(28px,6vw,48px)',
-    textShadow:'0 0 12px rgba(216,106,200,.55)',
-    zIndex:'9999', pointerEvents:'none', opacity:'0',
-    transition:'opacity .15s ease'
+    textShadow:'0 0 12px rgba(201,93,185,.5)',
+    opacity:'0', transition:'opacity .18s ease'
   });
-  document.body.appendChild(tag);
-  requestAnimationFrame(()=> tag.style.opacity = '1');
+  overlay.appendChild(tag);
+  requestAnimationFrame(()=> tag.style.opacity='1');
   setTimeout(()=> tag.style.opacity='0', 900);
   setTimeout(()=> tag.remove(), 1200);
 
   // Mini-Konfetti
   for (let i=0;i<24;i++){
-    const c = document.createElement('div');
+    const dot = document.createElement('div');
     const size = 6 + Math.random()*6;
-    Object.assign(c.style,{
-      position:'fixed', left:'50%', top:'50%',
+    Object.assign(dot.style,{
+      position:'absolute', left:'50%', top:'50%',
       width:size+'px', height:size+'px', borderRadius:'50%',
-      background: i%2? '#00eaff':'#d86ac8',
-      transform:`translate(-50%,-50%) translate(${(Math.random()-0.5)*260}px, ${(Math.random()-0.5)*160}px)`,
-      opacity:'0', zIndex:'9998', pointerEvents:'none'
+      background: (i%2?'#00eaff':'#c95db9'),
+      transform:`translate(${(Math.random()-0.5)*260}px, ${(Math.random()-0.5)*160}px)`,
+      opacity:'0', transition:'opacity .25s ease'
     });
-    document.body.appendChild(c);
-    setTimeout(()=>{ c.style.transition='opacity .3s ease'; c.style.opacity='1'; }, 10);
-    setTimeout(()=>{ c.style.opacity='0'; }, 600);
-    setTimeout(()=> c.remove(), 950);
+    overlay.appendChild(dot);
+    setTimeout(()=> dot.style.opacity='1', 10);
+    setTimeout(()=> dot.style.opacity='0', 600);
+    setTimeout(()=> dot.remove(), 950);
   }
 }
 
-function victoryFX(){
-  alert('🎉 Herzlichen Glückwunsch! Alle 100 Level gemeistert!');
-}
+function victoryFX(){ alert('🎉 Herzlichen Glückwunsch! Alle 100 Level gemeistert!') }
 
 function toast(msg){
   const el = document.createElement('div');

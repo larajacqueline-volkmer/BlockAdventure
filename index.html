@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Block Adventure</title>
   <link rel="stylesheet" href="style.css" />
@@ -21,19 +21,17 @@
   </header>
 
   <main class="wrap">
-    <div id="game-frame">
+    <section id="game-frame">
       <div id="game-container"></div>
-    </div>
+      <!-- Level-Overlay (wird per JS befüllt) -->
+      <div id="overlay"></div>
+    </section>
 
     <div id="level-info">Level 1 von 100</div>
-    <div class="progress">
-      <div id="progress-bar"></div>
-    </div>
+    <div class="progress"><div id="progress-bar"></div></div>
 
-    <div class="hint">
-      ← → bewegen &nbsp;&nbsp; ␣ springen &nbsp;&nbsp; 💾 Speichern (Taste S)
-    </div>
-    <div class="credit">Made by Lara Jacqueline Volkmer</div>
+    <p class="hint">← → bewegen  ␣ springen  💾 Speichern (S)</p>
+    <p class="credit">Made by Lara Jacqueline Volkmer</p>
   </main>
 
   <!-- Mobile Touch Controls -->
